@@ -81,7 +81,7 @@ async function update(){
   $('connection-status').textContent=(auth.pending?T.signin_pending:auth.connected?T.connected:auth.configured?T.configured:T.not_connected)+(auth.project?' · '+auth.project:'');
   $('credential-status').textContent=auth.configured?(auth.persistent?T.credentials_saved:T.credentials_memory):'';
   $('connect').disabled=!auth.configured||auth.pending||Boolean(state.active);$('connect').hidden=auth.connected&&!auth.error;
-  $('disconnect').hidden=!auth.configured;$('disconnect').disabled=Boolean(state.active);$('download').disabled=!auth.connected||Boolean(state.active);
+  $('disconnect').hidden=!auth.configured;$('disconnect').disabled=Boolean(state.active);$('download').disabled=!auth.connected||auth.pending||Boolean(auth.error)||Boolean(state.active);
   if(auth.error)notice(auth.error);
   if(auth.connected&&!wasConnected)action(()=>loadFolder());
   if(!auth.connected&&wasConnected){files=[];nextPage='';renderFiles();}

@@ -133,7 +133,8 @@ def create_app(store, auth, drive, engine, *, origin="http://127.0.0.1:8767", sh
     def create_job():
         if engine.busy():
             raise AppError("task_active")
-        if not auth.public()["connected"]:
+        connection = auth.public()
+        if not connection["connected"] or connection.get("pending") or connection.get("error"):
             raise AppError("connect_google", source="google")
         data = body()
         source = file_id(data.get("source", "root"))
@@ -164,11 +165,12 @@ def create_app(store, auth, drive, engine, *, origin="http://127.0.0.1:8767", sh
     def report(identity):
         if not store.job(identity):
             raise AppError("task_missing")
+        localized = messages[language()]
         def generate():
             yield "\ufeff"
             buffer = io.StringIO()
             writer = csv.writer(buffer)
-            writer.writerow(["file", "status", "bytes", "sha256", "error"])
+            writer.writerow(["file", "status", "bytes", "sha256", "error", "explanation"])
             yield buffer.getvalue()
             last = ""
             while True:
@@ -181,7 +183,7 @@ def create_app(store, auth, drive, engine, *, origin="http://127.0.0.1:8767", sh
                 for row in rows:
                     # CSV formula injection protection for cloud-controlled filenames.
                     name = row["local"]
-                    writer.writerow(["'" + name if name.startswith(("=", "+", "-", "@", "\t", "\r")) else name, row["status"], row["bytes"], row["sha"], row["error"]])
+                    writer.writerow(["'" + name if name.startswith(("=", "+", "-", "@", "\t", "\r")) else name, row["status"], row["bytes"], row["sha"], row["error"], localized.get(row["error"], row["error"])])
                     last = row["id"]
                 yield buffer.getvalue()
         return Response(generate(), mimetype="text/csv", headers={"Content-Disposition": "attachment; filename=DiskDownloader-report.csv"})

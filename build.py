@@ -28,7 +28,7 @@ if not destination.is_dir():
     raise RuntimeError("Build output missing")
 licenses = destination / "licenses"
 licenses.mkdir(exist_ok=True)
-pending = [Requirement(line).name for line in (root / "requirements.txt").read_text().splitlines() if line.strip()]
+pending = [Requirement(line).name for line in (root / "requirements.txt").read_text(encoding="utf-8").splitlines() if line.strip()]
 seen = set()
 inventory = []
 while pending:

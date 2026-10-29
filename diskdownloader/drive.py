@@ -63,6 +63,8 @@ class Drive:
                 self.quota.record(project, limited=1)
                 raise AppError("google_quota", retryable=True, source="google")
             if code == 401:
+                if hasattr(self.auth, "invalidate"):
+                    self.auth.invalidate()
                 raise AppError("google_signin_expired", source="google")
             if code == 403:
                 raise AppError("google_download_denied", source="google")

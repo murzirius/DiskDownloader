@@ -367,6 +367,8 @@ class Engine:
                 if response is not None:
                     response.close()
                 flush()
+        if offset < expected:
+            raise AppError("transfer_incomplete", retryable=True, source="internet")
         if offset != expected or (meta.get("sha256Checksum") and sha.hexdigest() != meta["sha256Checksum"]) or (meta.get("md5Checksum") and md5.hexdigest() != meta["md5Checksum"]):
             raise AppError("integrity_failed", source="google")
         if fingerprint(self.drive.get(row["id"])) != fingerprint(meta):

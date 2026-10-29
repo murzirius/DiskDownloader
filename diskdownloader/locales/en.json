@@ -112,6 +112,7 @@
   "google_signin_failed": "Google sign-in did not finish. Check your client JSON, test-user list and browser message, then try again.",
   "google_signin_expired": "Google access expired or was revoked. Reconnect Google Drive; saved files remain on your device.",
   "internet_unavailable": "The app could not reach Google over the internet, or the connection broke. Check your network and continue the task.",
+  "transfer_incomplete": "The transfer ended before the complete file arrived. The app will retry from its saved part. If paused, check your connection and continue the task.",
   "google_quota": "Google Drive limited requests or downloads. Wait before continuing. Your file parts are preserved.",
   "google_download_denied": "Google Drive denied this download. Check the file's sharing settings, the account used and the owner's download restrictions.",
   "google_file_missing": "Google Drive could not find this file, or your account no longer has access.",

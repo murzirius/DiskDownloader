@@ -38,7 +38,7 @@ def main():
                 assert process.poll() is None,"executable exited before serving"
                 assert time.monotonic()<deadline,"startup timeout"
                 time.sleep(.1)
-            runtime=json.loads((state/"runtime.json").read_text())
+            runtime=json.loads((state/"runtime.json").read_text(encoding="utf-8"))
             url=runtime["url"]
             native_window=False
             native_picker=False
@@ -90,7 +90,7 @@ def main():
                 native_picker=True
             second=subprocess.run(command,cwd=state,env=environment,stdout=log,stderr=log,timeout=30)
             assert second.returncode==0
-            assert json.loads((state/"runtime.json").read_text())["pid"]==runtime["pid"]
+            assert json.loads((state/"runtime.json").read_text(encoding="utf-8"))["pid"]==runtime["pid"]
             response=session.post(url+"api/shutdown",headers=headers,json={},timeout=15)
             assert response.status_code==200
             assert process.wait(timeout=30)==0

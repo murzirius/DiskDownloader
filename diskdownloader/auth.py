@@ -112,7 +112,7 @@ class Auth:
                 raise AppError("desktop_json_required")
             if self.pending:
                 return
-            self.pending, self.error = True, ""
+            self.pending, self.error, self.credentials = True, "", None
             config, epoch = self.config, self.epoch
 
         def authorize():
@@ -161,7 +161,14 @@ class Auth:
             with self.lock:
                 if epoch != self.epoch:
                     raise AppError("connect_google", source="google")
+                self.error = ""
             return credentials.token
+
+    def invalidate(self):
+        with self.lock:
+            self.error = "google_signin_expired"
+            if self.credentials:
+                self.credentials.token = None
 
     def disconnect(self):
         # Reject/discard in-flight sign-in and refresh results before clearing the vault.

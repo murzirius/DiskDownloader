@@ -309,3 +309,17 @@ def test_hardlinked_partial_is_not_modified(environment,tmp_path):
     job=run(engine,identity)
     assert job['error']=='unsafe_path'
     assert (tmp_path/'other-copy').read_bytes()==content[:300000]
+
+
+def test_short_successful_http_body_is_resumed_instead_of_failed(environment):
+    store,root=environment;content=b'abcdef'*100000
+    drive,engine,identity=setup_job(store,root,[("photo","photo.jpg",content)])
+    original=drive.content
+    def truncated_once(identity,offset):
+        response=original(identity,offset)
+        if len(drive.downloads)==1:response.content=response.content[:300000]
+        return response
+    drive.content=truncated_once
+    assert run(engine,identity)['status']=='complete'
+    assert drive.downloads==[('photo',0),('photo',300000)]
+    assert (root/'photo.jpg').read_bytes()==content

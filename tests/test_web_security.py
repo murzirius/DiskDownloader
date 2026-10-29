@@ -114,11 +114,11 @@ def test_error_responses_do_not_expose_exception_details(web):
 def test_translations_cover_all_interface_and_error_keys():
     import ast,re
     package=Path(__file__).resolve().parents[1]/"diskdownloader"
-    en=json.loads((package/"locales/en.json").read_text())
+    en=json.loads((package/"locales/en.json").read_text(encoding="utf-8"))
     ru=json.loads((package/"locales/ru.json").read_text(encoding="utf-8"))
     assert en.keys()==ru.keys()
-    keys=set(re.findall(r"text\.([a-z_0-9]+)",(package/"templates/index.html").read_text()))
-    keys.update(re.findall(r"\bT\.([a-z_]+)",(package/"static/app.js").read_text()))
+    keys=set(re.findall(r"text\.([a-z_0-9]+)",(package/"templates/index.html").read_text(encoding="utf-8")))
+    keys.update(re.findall(r"\bT\.([a-z_]+)",(package/"static/app.js").read_text(encoding="utf-8")))
     for source in package.glob("*.py"):
         tree=ast.parse(source.read_text(encoding="utf-8"))
         for node in ast.walk(tree):

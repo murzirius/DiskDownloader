@@ -40,3 +40,11 @@ def test_parallel_downloads_refresh_once(tmp_path):
     for worker in workers:worker.start()
     for worker in workers:worker.join(5)
     assert calls==[1]
+
+
+def test_invalid_access_token_has_a_visible_reconnect_reason(tmp_path):
+    auth=Auth(Store(tmp_path))
+    auth.credentials=types.SimpleNamespace(token='synthetic-not-real')
+    auth.invalidate()
+    assert auth.public()['error']=='google_signin_expired'
+    assert auth.credentials.token is None

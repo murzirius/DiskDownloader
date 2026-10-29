@@ -45,7 +45,7 @@ def main(argv=None):
         parser.error("port must be between 0 and 65535")
     if args.background:
         import subprocess
-        command = [sys.executable] + ([] if getattr(sys, "frozen", False) else [str(Path(__file__).parent.parent / "run.py")])
+        command = [sys.executable] + ([] if getattr(sys, "frozen", False) else ["-m", "diskdownloader"])
         command += ["--headless", "--port", str(args.port)]
         if args.no_browser:
             command += ["--no-browser"]
@@ -220,7 +220,7 @@ def main(argv=None):
     if ready.is_set():
         runtime = directory / "runtime.json"
         try:
-            if json.loads(runtime.read_text())["pid"] == os.getpid():
+            if json.loads(runtime.read_text(encoding="utf-8"))["pid"] == os.getpid():
                 runtime.unlink()
         except (OSError, ValueError, KeyError):
             pass
