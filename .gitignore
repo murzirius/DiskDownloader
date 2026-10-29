@@ -1,0 +1,17 @@
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+venv/
+build/
+dist/
+*.spec
+*.egg-info/
+.state/
+*.sqlite3*
+client_secret*.json
+credentials*.json
+token*.json
+AGENTS.md
+CLAUDE.md
+.DS_Store

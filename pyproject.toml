@@ -1,0 +1,20 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "diskdownloader"
+version = "0.1.0"
+description = "A local Google Drive archive downloader that preserves original files"
+requires-python = ">=3.11"
+license = "MIT"
+dynamic = ["dependencies"]
+
+[project.scripts]
+diskdownloader = "diskdownloader.launcher:main"
+
+[tool.setuptools.dynamic]
+dependencies = {file = ["requirements.txt"]}
+
+[tool.setuptools.package-data]
+diskdownloader = ["templates/*", "static/*", "static/fonts/*", "locales/*"]
