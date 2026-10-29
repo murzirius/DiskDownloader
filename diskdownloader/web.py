@@ -1,5 +1,6 @@
 import csv
 import io
+import hashlib
 import json
 import secrets
 import threading
@@ -21,6 +22,7 @@ def create_app(store, auth, drive, engine, *, origin="http://127.0.0.1:8767", sh
     app.config.update(MAX_CONTENT_LENGTH=64 * 1024, JSON_SORT_KEYS=False, APP_ORIGIN=origin)
     csrf = secrets.token_urlsafe(32)
     messages = {lang: json.loads((Path(__file__).parent / "locales" / (lang + ".json")).read_text(encoding="utf-8")) for lang in ("en", "ru")}
+    assets = {name: hashlib.sha256((Path(__file__).parent / "static" / name).read_bytes()).hexdigest()[:12] for name in ("app.js", "app.css")}
     app.extensions["csrf"] = csrf
     app.extensions["picker"] = {"pending": False, "path": "", "error": ""}
 
@@ -68,7 +70,7 @@ def create_app(store, auth, drive, engine, *, origin="http://127.0.0.1:8767", sh
         configured = store.get("language", "auto")
         lang = language()
         return render_template("index.html", text=messages[lang], lang=lang, language=configured,
-                               csrf=csrf, version=__version__)
+                               csrf=csrf, version=__version__, assets=assets)
 
     @app.get("/api/state")
     def state():

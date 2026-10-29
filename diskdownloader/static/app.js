@@ -21,6 +21,7 @@ async function api(path, data, timeout=30000) {
 async function action(fn){try{await fn();}catch(e){notice(e.message);}}
 let folder='root',folderName='Google Drive',history=[],files=[],nextPage='',listingSequence=0;
 let state=null, wasConnected=false, pickerPending=false, pollTimer=null, shuttingDown=false;
+let lastAuthError='',lastPollError='';
 const icon = isFolder => isFolder?'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 7a2 2 0 0 1 2-2h5l2 2h7a2 2 0 0 1 2 2v10H3Z"/></svg>':'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M6 3h8l4 4v14H6Z"/><path d="M14 3v5h4M9 12h6m-6 4h6"/></svg>';
 function renderFiles(){
   const list=$('file-list');list.replaceChildren();const filter=$('filter').value.toLocaleLowerCase(lang);
@@ -35,7 +36,7 @@ function renderFiles(){
     if(isFolder)name.addEventListener('click',()=>action(async()=>{history.push({id:folder,name:folderName});folder=file.id;folderName=file.name;await loadFolder();}));
     const size=document.createElement('div');size.className='file-size';size.textContent=isFolder?T.folder:unsupported?T.unsupported:bytes(file.size);
     info.append(name,size);row.append(symbol,info);
-    if(!isFolder&&!unsupported){const download=document.createElement('button');download.textContent='↓';download.title=T.download_file;download.setAttribute('aria-label',T.download_file+' '+file.name);download.addEventListener('click',()=>action(()=>startJob(file.id,file.name)));row.append(download);}
+    if(!isFolder&&!unsupported){const download=document.createElement('button');download.dataset.download='1';download.disabled=Boolean(state?.active);download.textContent='↓';download.title=T.download_file;download.setAttribute('aria-label',T.download_file+' '+file.name);download.addEventListener('click',()=>action(()=>startJob(file.id,file.name)));row.append(download);}
     list.append(row);
   }
   if(!list.children.length){const empty=document.createElement('div');empty.className='empty';empty.textContent=T.empty_folder;list.append(empty);}
@@ -82,9 +83,11 @@ async function update(){
   $('credential-status').textContent=auth.configured?(auth.persistent?T.credentials_saved:T.credentials_memory):'';
   $('connect').disabled=!auth.configured||auth.pending||Boolean(state.active);$('connect').hidden=auth.connected&&!auth.error;
   $('disconnect').hidden=!auth.configured;$('disconnect').disabled=Boolean(state.active);$('download').disabled=!auth.connected||auth.pending||Boolean(auth.error)||Boolean(state.active);
-  if(auth.error)notice(auth.error);
+  $('choose-client').disabled=Boolean(state.active)||auth.pending;
+  document.querySelectorAll('[data-download]').forEach(button=>{button.disabled=Boolean(state.active)||!auth.connected||auth.pending||Boolean(auth.error);});
+  if(auth.error&&auth.error!==lastAuthError)notice(auth.error);lastAuthError=auth.error||'';
   if(auth.connected&&!wasConnected)action(()=>loadFolder());
-  if(!auth.connected&&wasConnected){files=[];nextPage='';renderFiles();}
+  if(!auth.connected&&wasConnected){listingSequence++;folder='root';folderName='Google Drive';history=[];files=[];nextPage='';$('folder-name').textContent=folderName;$('back').disabled=true;renderFiles();}
   wasConnected=auth.connected;
   if(!auth.configured&&!localStorage.getItem('diskdownloader.help-seen')){$('help').open=true;localStorage.setItem('diskdownloader.help-seen','1');}
   if(pickerPending&&!state.picker.pending){pickerPending=false;$('pick-folder').disabled=false;if(state.picker.path)$('destination').value=state.picker.path;if(state.picker.error)notice(state.picker.error);}
@@ -94,9 +97,10 @@ async function update(){
   meter('minute-meter',q.recent.units,Math.min(l.project_minute,l.user_minute));meter('day-meter',q.day.units,l.day_units);meter('bytes-meter',q.day.bytes,l.day_bytes);$('console').href=state.console;
   if(limitsProject!==q.project){for(const[k,v]of Object.entries(l))$('limits-form').elements[k].value=v;limitsProject=q.project;}
 }
-async function poll(){if(shuttingDown)return;try{await update();}catch(e){notice(e.message);}finally{clearTimeout(pollTimer);pollTimer=setTimeout(poll,document.hidden?30000:state?.active||state?.auth.pending||pickerPending?2000:15000);}}
+async function poll(){if(shuttingDown)return;try{await update();lastPollError='';}catch(e){if(e.message!==lastPollError)notice(e.message);lastPollError=e.message;}finally{clearTimeout(pollTimer);pollTimer=setTimeout(poll,document.hidden?30000:state?.active||state?.auth.pending||pickerPending?2000:15000);}}
 $('notice-close').onclick=()=>{$('notice').hidden=true;};$('help-toggle').onclick=()=>{$('help').open=!$('help').open;if($('help').open)$('help').scrollIntoView({behavior:'smooth',block:'start'});};
 $('language').onchange=()=>action(async()=>{await api('/api/settings',{language:$('language').value});location.reload();});
+$('choose-client').onclick=()=>{$('client-file').click();};
 $('client-file').onchange=()=>action(async()=>{if(!$('client-file').files[0])return;const data=new FormData();data.append('file',$('client-file').files[0]);await api('/api/client',data);notice('file_imported');await update();});
 $('connect').onclick=()=>action(async()=>{await api('/api/connect',{});await update();clearTimeout(pollTimer);pollTimer=setTimeout(poll,2000);});
 $('disconnect').onclick=()=>action(async()=>{await api('/api/disconnect',{});await update();});

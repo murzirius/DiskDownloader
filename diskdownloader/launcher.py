@@ -49,7 +49,8 @@ def main(argv=None):
         command += ["--headless", "--port", str(args.port)]
         if args.no_browser:
             command += ["--no-browser"]
-        kwargs = {"stdin": subprocess.DEVNULL, "stdout": subprocess.DEVNULL, "stderr": subprocess.DEVNULL}
+        kwargs = {"stdin": subprocess.DEVNULL, "stdout": subprocess.DEVNULL, "stderr": subprocess.DEVNULL,
+                  "cwd": Path(sys.executable).parent if getattr(sys, "frozen", False) else Path(__file__).resolve().parent.parent}
         if os.name == "nt":
             kwargs["creationflags"] = subprocess.DETACHED_PROCESS | subprocess.CREATE_NEW_PROCESS_GROUP
         else:
