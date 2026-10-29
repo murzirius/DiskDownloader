@@ -93,12 +93,17 @@ def main():
             assert json.loads((state/"runtime.json").read_text(encoding="utf-8"))["pid"]==runtime["pid"]
             response=session.post(url+"api/shutdown",headers=headers,json={},timeout=15)
             assert response.status_code==200
-            assert process.wait(timeout=30)==0
+            exit_code=process.wait(timeout=30)
+            assert exit_code==0, f"native shutdown returned {exit_code}"
             assert not (state/"runtime.json").exists()
             print(json.dumps({"native_startup":True,"local_http":True,"auto_language":True,"csrf":True,
                               "bundled_font":True,"single_instance":True,"clean_shutdown":True,
                               "window_requested":args.window,"native_window_verified":native_window,
                               "native_picker_verified":native_picker,"google_account_tested":False}))
+        except Exception:
+            log.flush()
+            print((state/"startup.log").read_text(encoding="utf-8",errors="replace")[-12000:],file=sys.stderr)
+            raise
         finally:
             if process.poll() is None:
                 process.terminate()
