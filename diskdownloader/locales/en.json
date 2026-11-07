@@ -55,12 +55,7 @@
   "footer": "Files stay on your device. Independent open-source application.",
   "report_issue": "Report a problem",
   "exit": "Exit application",
-  "setup_title": "Connect your own Google Cloud project",
-  "setup_1": "Create a project in Google Cloud Console.",
-  "setup_2": "In APIs & Services → Library, enable Google Drive API.",
-  "setup_3": "In Google Auth Platform, configure the audience and request drive.readonly access. In Testing, add your own Google account as a test user.",
-  "setup_4": "Create an OAuth client of type Desktop app. Download its JSON file. Do not create a service-account key or a plain API key.",
-  "setup_5": "Choose that JSON here, then click Connect Google Drive. Sign in using the browser window.",
+  "setup_title": "Connect your Google Drive",
   "testing_notice": "Google limits Testing authorizations to seven days. Personal-use exceptions and publication requirements must be checked for your project. In production status, an unverified-app warning may still appear.",
   "privacy": "The app reads your Drive and saves chosen originals locally. OAuth credentials are stored in the operating system's credential store when available; otherwise they stay in memory for this session. They are never written to a plaintext token file.",
   "google_rules": "Google's verification and personal-use rules",
@@ -139,5 +134,358 @@
   "folder_picker_failed": "The app could not open the system folder picker. Enter the destination's full path manually.",
   "request_timeout": "The local app did not respond in time. Check its status window before repeating the command.",
   "service_unreachable": "The browser cannot reach the local app. Start DiskDownloader and reopen its interface.",
-  "limits_saved": "Reference values saved. Actual Google quotas were not changed."
+  "limits_saved": "Reference values saved. Actual Google quotas were not changed.",
+  "guide_label": "SETUP · FROM THE BEGINNING",
+  "guide_description": "One small step at a time, from your Google account to your first download.",
+  "guide_progress": "Current setup step",
+  "guide_navigation": "Choose a setup step",
+  "guide_counter": "Step {current} of {total}",
+  "guide_restart": "Start over",
+  "guide_previous": "Back",
+  "guide_next": "Next step",
+  "guide_finish": "Finish guide",
+  "guide_saved": "Your place is saved on this device.",
+  "guide_checkpoint": "Before you continue",
+  "guide_troubleshoot": "Need a little more help?",
+  "guide_google_docs": "Google’s documentation",
+  "guide_import_ready": "Client JSON imported. Project: {project}",
+  "guide_import_waiting": "Choose the JSON you downloaded in the previous step.",
+  "guide_steps": [
+    {
+      "short": "Get ready",
+      "title": "Start with the account that holds your files",
+      "where": "IN YOUR BROWSER",
+      "intro": "You will create your own Google project, then let this app read your Drive.",
+      "actions": [
+        {
+          "title": "Open Google Drive.",
+          "body": "Sign in at drive.google.com. Use the account whose files you want to save; check the account picture in the top-right corner."
+        },
+        {
+          "title": "Find a small folder to try first.",
+          "body": "Make sure its files are visible. Leave that tab open and keep DiskDownloader running while you follow this guide."
+        },
+        {
+          "title": "Keep this guide nearby.",
+          "body": "Google pages open in another tab. Return here after each step; Back and Next only move through the instructions."
+        }
+      ],
+      "check": "You know which Google account and folder you will use.",
+      "note": "A Google Cloud project identifies your own copy of the app. This app reads Drive content and saves it on your device; it does not upload your archive to the developer.",
+      "href": "https://drive.google.com/",
+      "link": "Open Google Drive",
+      "docs": "",
+      "code": "",
+      "action": "",
+      "action_label": ""
+    },
+    {
+      "short": "Create a project",
+      "title": "Create your personal Google Cloud project",
+      "where": "GOOGLE CLOUD CONSOLE",
+      "intro": "Use the same project throughout the Google Cloud steps.",
+      "actions": [
+        {
+          "title": "Open the project creation page.",
+          "body": "Sign in if asked. If this is your first visit, read and accept Google’s terms if you agree."
+        },
+        {
+          "title": "Name the project.",
+          "body": "Enter DiskDownloader Personal as the project name. Keep the automatically generated project ID. Use No organization if it is available for your personal account."
+        },
+        {
+          "title": "Create it and select it.",
+          "body": "Click Create and wait. Use the project selector at the top of the console to select DiskDownloader Personal."
+        }
+      ],
+      "check": "Your project name appears in the console’s top project selector.",
+      "note": "If project creation is blocked on a work or school account, ask its administrator about access. If you already have a suitable project, select it and continue.",
+      "href": "https://console.cloud.google.com/projectcreate",
+      "link": "Create a Google Cloud project",
+      "docs": "https://cloud.google.com/resource-manager/docs/creating-managing-projects",
+      "code": "",
+      "action": "",
+      "action_label": ""
+    },
+    {
+      "short": "Enable Drive API",
+      "title": "Turn on the Google Drive API",
+      "where": "GOOGLE CLOUD · API LIBRARY",
+      "intro": "The API is the connection this app uses to list and download your Drive files.",
+      "actions": [
+        {
+          "title": "Check the selected project.",
+          "body": "Confirm the top project selector still shows your DiskDownloader project."
+        },
+        {
+          "title": "Open the Drive API page.",
+          "body": "Use the button below, or open APIs & Services → Library and search for Google Drive API. Choose that exact API."
+        },
+        {
+          "title": "Enable it.",
+          "body": "Click Enable and wait for the API overview. If the page already offers Manage or Disable, the API is enabled."
+        }
+      ],
+      "check": "Google Drive API is enabled for your selected project.",
+      "note": "Google Photos and Google Cloud Storage are different services. This app needs Google Drive API.",
+      "href": "https://console.cloud.google.com/apis/library/drive.googleapis.com",
+      "link": "Open the Drive API page",
+      "docs": "https://cloud.google.com/apis/docs/getting-started",
+      "code": "",
+      "action": "",
+      "action_label": ""
+    },
+    {
+      "short": "App details",
+      "title": "Give the connection a name",
+      "where": "GOOGLE AUTH PLATFORM · BRANDING",
+      "intro": "These details identify your own app on Google’s sign-in screen.",
+      "actions": [
+        {
+          "title": "Open Branding.",
+          "body": "In the console menu, open Google Auth platform → Branding, or use the button below."
+        },
+        {
+          "title": "Start configuration.",
+          "body": "If Google says the platform is not configured, click Get Started. Enter DiskDownloader Personal for the app name."
+        },
+        {
+          "title": "Choose your email.",
+          "body": "For User support email, choose your own email address. Click Next to reach the audience screen."
+        }
+      ],
+      "check": "The app has a name and your support email; the next screen asks about its audience.",
+      "note": "If configuration already exists, check its app name and support email in Branding, save any changes, and continue. Google may translate its menu labels.",
+      "href": "https://console.cloud.google.com/auth/branding",
+      "link": "Open app branding",
+      "docs": "https://developers.google.com/workspace/guides/configure-oauth-consent",
+      "code": "",
+      "action": "",
+      "action_label": ""
+    },
+    {
+      "short": "Choose audience",
+      "title": "Set up the app for your personal account",
+      "where": "GOOGLE AUTH PLATFORM · INITIAL SETUP",
+      "intro": "A personal Gmail account uses the External audience.",
+      "actions": [
+        {
+          "title": "Choose External.",
+          "body": "On the audience screen, select External and continue. Internal is for accounts restricted to a Google Workspace organization."
+        },
+        {
+          "title": "Enter a contact email.",
+          "body": "Use your own address on the contact information screen so Google can contact you about this project."
+        },
+        {
+          "title": "Finish configuration.",
+          "body": "Review the requested Google policies. If you agree, accept them, continue, and create the configuration."
+        }
+      ],
+      "check": "Google Auth platform is configured for your project.",
+      "note": "If you configured this project before, open Audience to check its audience. Work or school policies may restrict which audience types you can use.",
+      "href": "https://console.cloud.google.com/auth/audience",
+      "link": "Open audience settings",
+      "docs": "https://developers.google.com/workspace/guides/configure-oauth-consent",
+      "code": "",
+      "action": "",
+      "action_label": ""
+    },
+    {
+      "short": "Add your account",
+      "title": "Allow your account to use the test app",
+      "where": "GOOGLE AUTH PLATFORM · AUDIENCE",
+      "intro": "While the project is in Testing, the account you sign in with must be on its test-user list.",
+      "actions": [
+        {
+          "title": "Open Audience.",
+          "body": "Keep the personal setup in Testing. Find the Test users section."
+        },
+        {
+          "title": "Add your Drive account.",
+          "body": "Click Add users. Enter the full email address of the account holding your files, then save it."
+        },
+        {
+          "title": "Check the saved address.",
+          "body": "Confirm the account appears in the list. You will choose this same account when signing in from DiskDownloader."
+        }
+      ],
+      "check": "Your Google Drive account is listed under Test users.",
+      "note": "Drive authorizations in Testing normally expire after seven days, so you may need to reconnect. Switching to In production does not itself verify the app. For an existing production project, follow Google’s rules for its publishing status.",
+      "href": "https://console.cloud.google.com/auth/audience",
+      "link": "Open test users",
+      "docs": "https://developers.google.com/workspace/guides/configure-oauth-consent",
+      "code": "",
+      "action": "",
+      "action_label": ""
+    },
+    {
+      "short": "Read-only access",
+      "title": "Add permission to read your Drive",
+      "where": "GOOGLE AUTH PLATFORM · DATA ACCESS",
+      "intro": "Use the exact read-only scope below so the app can retrieve your stored originals.",
+      "actions": [
+        {
+          "title": "Open Data Access.",
+          "body": "Choose Data Access in Google Auth platform, then Add or Remove Scopes."
+        },
+        {
+          "title": "Find the read-only Drive scope.",
+          "body": "Search for drive.readonly. If the scope is not listed, use Google’s manual entry field for the exact address below."
+        },
+        {
+          "title": "Update and save.",
+          "body": "Select that scope, apply the selection, and save the Data Access page. Do not substitute the metadata-only scope: it cannot download the original content."
+        }
+      ],
+      "check": "The Data Access page includes the full drive.readonly scope below.",
+      "note": "This permission lets the app read Drive files without editing or deleting them. Google classifies some scopes as restricted; personal-use and verification requirements depend on how the project is used.",
+      "href": "https://console.cloud.google.com/auth/scopes",
+      "link": "Open Data Access",
+      "docs": "https://developers.google.com/workspace/guides/configure-oauth-consent",
+      "code": "https://www.googleapis.com/auth/drive.readonly",
+      "action": "",
+      "action_label": ""
+    },
+    {
+      "short": "Desktop client",
+      "title": "Create an OAuth client for this app",
+      "where": "GOOGLE AUTH PLATFORM · CLIENTS",
+      "intro": "The client tells Google that you are connecting a desktop application.",
+      "actions": [
+        {
+          "title": "Open Clients.",
+          "body": "Choose Clients in Google Auth platform, then Create Client."
+        },
+        {
+          "title": "Choose Desktop app.",
+          "body": "Set Application type to Desktop app and name it DiskDownloader Desktop. This is a normal desktop app, not an AI agent."
+        },
+        {
+          "title": "Create the client.",
+          "body": "Click Create. Keep the resulting client dialog open for the next step."
+        }
+      ],
+      "check": "A Desktop app OAuth client has been created.",
+      "note": "If the form asks for authorized JavaScript origins or web redirect URLs, check the application type. An API key or service-account key cannot replace the Desktop app client JSON.",
+      "href": "https://console.cloud.google.com/auth/clients",
+      "link": "Open OAuth clients",
+      "docs": "https://support.google.com/cloud/answer/15549257",
+      "code": "",
+      "action": "",
+      "action_label": ""
+    },
+    {
+      "short": "Download JSON",
+      "title": "Save the client JSON to your computer",
+      "where": "GOOGLE CLOUD · NEW CLIENT DIALOG",
+      "intro": "DiskDownloader imports this file so you do not have to paste client details.",
+      "actions": [
+        {
+          "title": "Download the JSON now.",
+          "body": "Use Download JSON in the client creation dialog. Your browser usually saves it in Downloads."
+        },
+        {
+          "title": "Keep the downloaded file as it is.",
+          "body": "It normally has a long name ending in .json. You do not need to rename it, open it in an editor, or copy its contents."
+        },
+        {
+          "title": "Return to DiskDownloader.",
+          "body": "Keep the file on this device. The next step opens a file picker to select it."
+        }
+      ],
+      "check": "You can find the downloaded client .json file in your Downloads folder.",
+      "note": "Google may only show a client secret when the client is created. If you cannot obtain a complete client JSON later, create a new Desktop app client and download its JSON immediately.",
+      "href": "",
+      "link": "",
+      "docs": "https://support.google.com/cloud/answer/15549257",
+      "code": "",
+      "action": "",
+      "action_label": ""
+    },
+    {
+      "short": "Import JSON",
+      "title": "Choose the file in DiskDownloader",
+      "where": "BACK IN DISKDOWNLOADER",
+      "intro": "Use the button below; you can complete this step without closing the guide.",
+      "actions": [
+        {
+          "title": "Open the file picker.",
+          "body": "Click Choose client JSON below and go to your Downloads folder."
+        },
+        {
+          "title": "Select the downloaded JSON.",
+          "body": "Choose the file from the previous step and open it. The app checks that it is a Desktop app client configuration."
+        },
+        {
+          "title": "Check the project status.",
+          "body": "The status below will confirm the import and show your Google Cloud project ID."
+        }
+      ],
+      "check": "The status confirms that the client JSON has been imported.",
+      "note": "If the file is rejected, return to Clients and check that it was created as Desktop app. Keep the JSON private rather than attaching it to an issue or message.",
+      "href": "",
+      "link": "",
+      "docs": "",
+      "code": "",
+      "action": "import",
+      "action_label": "Choose client JSON"
+    },
+    {
+      "short": "Sign in to Google",
+      "title": "Authorize the connection in your browser",
+      "where": "DISKDOWNLOADER → GOOGLE SIGN-IN",
+      "intro": "The sign-in opens in your system browser. Keep the app running.",
+      "actions": [
+        {
+          "title": "Start the connection.",
+          "body": "Click Connect Google Drive below. The button becomes available after importing the client JSON."
+        },
+        {
+          "title": "Choose your test account.",
+          "body": "Select the account you added in Audience → Test users. Review the app name and the requested Drive read permission before allowing access."
+        },
+        {
+          "title": "Return here when Google is finished.",
+          "body": "The status below changes to Connected when the app receives the result. If sign-in times out, start the connection again."
+        }
+      ],
+      "check": "The live connection status says Connected.",
+      "note": "An access-blocked error often means the chosen account is missing from Test users, or an organization policy blocks the app. An unverified-app notice can appear for your own test project: check that its name and permissions match what you created before using Google’s Advanced/continue option, if Google offers it.",
+      "href": "",
+      "link": "",
+      "docs": "",
+      "code": "",
+      "action": "connect",
+      "action_label": "Connect Google Drive"
+    },
+    {
+      "short": "First download",
+      "title": "Save a small folder first",
+      "where": "IN DISKDOWNLOADER",
+      "intro": "Your connection is ready. Finish the guide to reach the file browser.",
+      "actions": [
+        {
+          "title": "Open a Drive folder.",
+          "body": "In the source panel, click the folder name you want. Download this folder saves its contents, including subfolders."
+        },
+        {
+          "title": "Choose a destination on your device.",
+          "body": "Use the folder-picker button or enter a full path. Start with four simultaneous files, then click Download this folder."
+        },
+        {
+          "title": "Check the result.",
+          "body": "Follow the task until it finishes, then open its CSV report. For an interrupted task, use Continue / check missing files with the same account and destination."
+        }
+      ],
+      "check": "Your files are saved and you have checked the task report.",
+      "note": "Closing the browser tab leaves the app running. Use Exit application to stop it. Keep your cloud copy while checking your first download. Google-native documents and shortcuts are listed as unsupported.",
+      "href": "",
+      "link": "",
+      "docs": "",
+      "code": "",
+      "action": "destination",
+      "action_label": "Go to the download screen"
+    }
+  ]
 }

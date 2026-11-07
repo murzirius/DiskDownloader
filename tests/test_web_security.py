@@ -117,7 +117,9 @@ def test_translations_cover_all_interface_and_error_keys():
     en=json.loads((package/"locales/en.json").read_text(encoding="utf-8"))
     ru=json.loads((package/"locales/ru.json").read_text(encoding="utf-8"))
     assert en.keys()==ru.keys()
-    keys=set(re.findall(r"text\.([a-z_0-9]+)",(package/"templates/index.html").read_text(encoding="utf-8")))
+    keys=set()
+    for template in (package/"templates").glob("*.html"):
+        keys.update(re.findall(r"text\.([a-z_0-9]+)",template.read_text(encoding="utf-8")))
     keys.update(re.findall(r"\bT\.([a-z_]+)",(package/"static/app.js").read_text(encoding="utf-8")))
     for source in package.glob("*.py"):
         tree=ast.parse(source.read_text(encoding="utf-8"))

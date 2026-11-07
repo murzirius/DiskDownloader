@@ -1,0 +1,35 @@
+<dialog id="help" class="setup-dialog" aria-labelledby="setup-heading" aria-describedby="setup-description">
+  <div class="setup-shell">
+    <div class="setup-header">
+      <div><p class="eyebrow">{{ text.guide_label }}</p><h2 id="setup-heading">{{ text.setup_title }}</h2><p id="setup-description" class="muted">{{ text.guide_description }}</p></div>
+      <button id="help-close" class="icon-button" aria-label="{{ text.close }}">×</button>
+    </div>
+    <div class="setup-progress">
+      <div class="setup-progress-label"><span id="setup-counter" aria-live="polite"></span><button id="setup-restart" class="text-button">{{ text.guide_restart }}</button></div>
+      <progress id="setup-progress" value="1" max="{{ text.guide_steps|length }}" aria-label="{{ text.guide_progress }}"></progress>
+      <label class="sr-only" for="setup-select">{{ text.guide_navigation }}</label>
+      <select id="setup-select" class="setup-select">{% for step in text.guide_steps %}<option value="{{ loop.index0 }}">{{ loop.index }}. {{ step.short }}</option>{% endfor %}</select>
+    </div>
+    <div class="setup-body">
+      <nav class="setup-nav" aria-label="{{ text.guide_navigation }}"><ol>{% for step in text.guide_steps %}<li><button class="setup-jump" data-step="{{ loop.index0 }}"><span class="step-number" aria-hidden="true">{{ loop.index }}</span><span>{{ step.short }}</span></button></li>{% endfor %}</ol></nav>
+      <div id="setup-pages" class="setup-pages">
+        <div id="setup-alert" class="notice" role="alert" hidden><span id="setup-alert-text"></span><button id="setup-alert-close" aria-label="{{ text.close }}">×</button></div>
+        {% for step in text.guide_steps %}
+        <section class="setup-step" aria-labelledby="setup-title-{{ loop.index0 }}" {% if not loop.first %}hidden{% endif %}>
+          <p class="setup-location">{{ step.where }}</p>
+          <h3 id="setup-title-{{ loop.index0 }}" tabindex="-1">{{ step.title }}</h3>
+          <p class="setup-intro muted">{{ step.intro }}</p>
+          <ol class="setup-instructions">{% for instruction in step.actions %}<li><strong>{{ instruction.title }}</strong><p>{{ instruction.body }}</p></li>{% endfor %}</ol>
+          {% if step.code %}<div class="setup-code"><code>{{ step.code }}</code></div>{% endif %}
+          <div class="setup-checkpoint"><span aria-hidden="true">✓</span><div><strong>{{ text.guide_checkpoint }}</strong><p>{{ step.check }}</p></div></div>
+          {% if step.href %}<a class="button primary setup-external" href="{{ step.href }}" target="_blank" rel="noreferrer">{{ step.link }} <span aria-hidden="true">↗</span></a>{% endif %}
+          {% if step.action %}<div class="setup-app-action"><button class="primary" data-setup-action="{{ step.action }}">{{ step.action_label }}</button>{% if step.action in ['import','connect'] %}<p class="small muted setup-live-status" role="status" data-setup-status="{{ step.action }}"></p>{% endif %}</div>{% endif %}
+          {% if step.note %}<details class="setup-tip"><summary>{{ text.guide_troubleshoot }}</summary><p>{{ step.note }}</p>{% if step.docs %}<a href="{{ step.docs }}" target="_blank" rel="noreferrer">{{ text.guide_google_docs }} ↗</a>{% endif %}</details>{% endif %}
+        </section>
+        {% endfor %}
+      </div>
+    </div>
+    <div class="setup-footer"><button id="setup-previous">← {{ text.guide_previous }}</button><span class="setup-saved small muted">{{ text.guide_saved }}</span><button id="setup-next" class="primary">{{ text.guide_next }} →</button></div>
+    <input id="client-file" type="file" accept=".json,application/json" hidden>
+  </div>
+</dialog>

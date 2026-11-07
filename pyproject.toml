@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "diskdownloader"
-version = "0.1.0"
+version = "0.1.1"
 description = "A local Google Drive archive downloader that preserves original files"
 requires-python = ">=3.11"
 license = "MIT"

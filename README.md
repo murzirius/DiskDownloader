@@ -51,7 +51,7 @@ Run `python run.py` again to open the existing instance. Headless operation has 
 2. Under **APIs & Services → Library**, enable **Google Drive API**.
 3. Configure **Google Auth Platform**. For a personal test, choose an external audience and add your own account to **Test users**. Request only `https://www.googleapis.com/auth/drive.readonly`.
 4. Create an OAuth client of type **Desktop app**, then download its JSON configuration. A service-account key or plain API key will not work.
-5. In DiskDownloader, choose **Choose client JSON**, select the downloaded file and click **Connect Google Drive**.
+5. In DiskDownloader, open **How to connect** for a 12-step setup guide with progress and a saved place. You can import the downloaded JSON and start Google sign-in directly from the guide.
 6. Complete sign-in in the system browser using the account that can access the archive.
 
 In Google's **Testing** status, Drive authorizations expire after seven days. Personal-use exceptions, publishing status and verification requirements depend on how the project is used. Changing to **In production** does not itself verify an app or guarantee permanent access. Read [Google's personal-use and verification rules](https://developers.google.com/identity/protocols/oauth2/production-readiness/restricted-scope-verification#exceptions-verification).
@@ -88,6 +88,8 @@ Partial downloads live in a reserved `.diskdownloader` folder inside the chosen 
 ```sh
 python -m pip install -r requirements-dev.txt
 python -m pytest -q
+python -m playwright install chromium
+python tools/check_ui.py
 python build.py
 ```
 

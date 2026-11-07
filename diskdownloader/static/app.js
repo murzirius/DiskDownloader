@@ -6,7 +6,10 @@ const lang = document.documentElement.lang;
 const number = n => new Intl.NumberFormat(lang).format(n || 0);
 function bytes(n) { let i=0; const units=lang==='ru'?['Б','КБ','МБ','ГБ','ТБ']:['B','KB','MB','GB','TB']; n=Number(n)||0; while(n>=1000&&i<4){n/=1000;i++;}return new Intl.NumberFormat(lang,{maximumFractionDigits:i?1:0}).format(n)+' '+units[i]; }
 function message(code){ return T[code] || T.application_failed; }
-function notice(code){$('notice-text').textContent=message(code);$('notice').hidden=false;}
+function notice(code){
+  if($('help').open){$('setup-alert-text').textContent=message(code);$('setup-alert').hidden=false;$('setup-pages').scrollTop=0;}
+  else{$('notice-text').textContent=message(code);$('notice').hidden=false;}
+}
 async function api(path, data, timeout=30000) {
   const controller=new AbortController(), timer=setTimeout(()=>controller.abort(),timeout);
   try{
@@ -89,7 +92,9 @@ async function update(){
   if(auth.connected&&!wasConnected)action(()=>loadFolder());
   if(!auth.connected&&wasConnected){listingSequence++;folder='root';folderName='Google Drive';history=[];files=[];nextPage='';$('folder-name').textContent=folderName;$('back').disabled=true;renderFiles();}
   wasConnected=auth.connected;
-  if(!auth.configured&&!localStorage.getItem('diskdownloader.help-seen')){$('help').open=true;localStorage.setItem('diskdownloader.help-seen','1');}
+  syncGuide(auth);
+  if(auth.configured)guideIntroduced=true;
+  if(!auth.configured&&!guideIntroduced)openGuide();
   if(pickerPending&&!state.picker.pending){pickerPending=false;$('pick-folder').disabled=false;if(state.picker.path)$('destination').value=state.picker.path;if(state.picker.error)notice(state.picker.error);}
   renderJobs(state.jobs);const q=state.quota,l=q.limits;
   $('minute-units').textContent=number(q.recent.units);$('day-units').textContent=number(q.day.units);$('day-bytes').textContent=bytes(q.day.bytes);$('limited').textContent=number(q.day.limited);
@@ -98,11 +103,65 @@ async function update(){
   if(limitsProject!==q.project){for(const[k,v]of Object.entries(l))$('limits-form').elements[k].value=v;limitsProject=q.project;}
 }
 async function poll(){if(shuttingDown)return;try{await update();lastPollError='';}catch(e){if(e.message!==lastPollError)notice(e.message);lastPollError=e.message;}finally{clearTimeout(pollTimer);pollTimer=setTimeout(poll,document.hidden?30000:state?.active||state?.auth.pending||pickerPending?2000:15000);}}
-$('notice-close').onclick=()=>{$('notice').hidden=true;};$('help-toggle').onclick=()=>{$('help').open=!$('help').open;if($('help').open)$('help').scrollIntoView({behavior:'smooth',block:'start'});};
+function guidePreference(key){try{return localStorage.getItem('diskdownloader.setup-'+key);}catch{return null;}}
+function saveGuidePreference(key,value){try{localStorage.setItem('diskdownloader.setup-'+key,value);}catch{}}
+const guidePages=[...document.querySelectorAll('.setup-step')];
+const guideJumps=[...document.querySelectorAll('.setup-jump')];
+let guideStep=0,guideIntroduced=guidePreference('seen')==='1',guideReturnFocus=null;
+function showGuideStep(index,focus=true){
+  guideStep=Math.max(0,Math.min(guidePages.length-1,Number.isFinite(index)?Math.trunc(index):0));
+  guidePages.forEach((page,i)=>{page.hidden=i!==guideStep;});
+  guideJumps.forEach((button,i)=>{if(i===guideStep)button.setAttribute('aria-current','step');else button.removeAttribute('aria-current');});
+  $('setup-select').value=String(guideStep);
+  $('setup-counter').textContent=T.guide_counter.replace('{current}',number(guideStep+1)).replace('{total}',number(guidePages.length));
+  $('setup-progress').value=guideStep+1;
+  $('setup-previous').disabled=guideStep===0;
+  $('setup-next').textContent=guideStep===guidePages.length-1?T.guide_finish:T.guide_next+' →';
+  $('setup-alert').hidden=true;
+  $('setup-pages').scrollTop=0;
+  saveGuidePreference('step',String(guideStep));
+  if(focus&&$('help').open)guidePages[guideStep].querySelector('h3').focus({preventScroll:true});
+}
+function openGuide(){
+  guideIntroduced=true;saveGuidePreference('seen','1');
+  showGuideStep(Number(guidePreference('step')??guideStep),false);
+  if(!$('help').open){$('help').showModal();document.body.classList.add('modal-open');}
+  guidePages[guideStep].querySelector('h3').focus({preventScroll:true});
+}
+function syncGuide(auth){
+  const importing=document.querySelector('[data-setup-action="import"]');
+  const connecting=document.querySelector('[data-setup-action="connect"]');
+  importing.disabled=Boolean(state.active)||auth.pending;
+  connecting.disabled=!auth.configured||auth.pending||Boolean(state.active)||Boolean(auth.connected&&!auth.error);
+  document.querySelector('[data-setup-status="import"]').textContent=auth.configured?T.guide_import_ready.replace('{project}',auth.project):T.guide_import_waiting;
+  document.querySelector('[data-setup-status="connect"]').textContent=auth.error?message(auth.error):auth.pending?T.signin_pending:auth.connected?T.connected:auth.configured?T.configured:T.not_connected;
+}
+$('help-toggle').onclick=openGuide;
+$('help-close').onclick=()=>{$('help').close();};
+$('help').addEventListener('close',()=>{document.body.classList.remove('modal-open');(guideReturnFocus||$('help-toggle')).focus({preventScroll:true});guideReturnFocus=null;});
+$('help').addEventListener('keydown',event=>{
+  if(event.key!=='Tab')return;
+  const controls=[...$('help').querySelectorAll('button,a[href],input,select,summary,[tabindex]')].filter(element=>!element.disabled&&element.tabIndex>=0&&element.getClientRects().length);
+  const first=controls[0],last=controls[controls.length-1];
+  if(event.shiftKey&&(document.activeElement===first||!controls.includes(document.activeElement))){event.preventDefault();last.focus();}
+  else if(!event.shiftKey&&document.activeElement===last){event.preventDefault();first.focus();}
+});
+$('help').addEventListener('click',event=>{const box=$('help').getBoundingClientRect();if(event.target===$('help')&&(event.clientX<box.left||event.clientX>box.right||event.clientY<box.top||event.clientY>box.bottom))$('help').close();});
+guideJumps.forEach(button=>{button.onclick=()=>showGuideStep(Number(button.dataset.step));});
+$('setup-select').onchange=()=>showGuideStep(Number($('setup-select').value));
+$('setup-previous').onclick=()=>showGuideStep(guideStep-1);
+$('setup-next').onclick=()=>{if(guideStep===guidePages.length-1)$('help').close();else showGuideStep(guideStep+1);};
+$('setup-restart').onclick=()=>showGuideStep(0);
+document.querySelector('[data-setup-action="import"]').onclick=()=>{$('client-file').click();};
+document.querySelector('[data-setup-action="connect"]').onclick=()=>action(connectDrive);
+document.querySelector('[data-setup-action="destination"]').onclick=()=>{guideReturnFocus=$('destination');$('help').close();};
+$('setup-alert-close').onclick=()=>{$('setup-alert').hidden=true;};
+$('notice-close').onclick=()=>{$('notice').hidden=true;};
 $('language').onchange=()=>action(async()=>{await api('/api/settings',{language:$('language').value});location.reload();});
 $('choose-client').onclick=()=>{$('client-file').click();};
 $('client-file').onchange=()=>action(async()=>{if(!$('client-file').files[0])return;const data=new FormData();data.append('file',$('client-file').files[0]);await api('/api/client',data);notice('file_imported');await update();});
-$('connect').onclick=()=>action(async()=>{await api('/api/connect',{});await update();clearTimeout(pollTimer);pollTimer=setTimeout(poll,2000);});
+async function connectDrive(){await api('/api/connect',{});await update();clearTimeout(pollTimer);pollTimer=setTimeout(poll,2000);}
+$('connect').onclick=()=>action(connectDrive);
 $('disconnect').onclick=()=>action(async()=>{await api('/api/disconnect',{});await update();});
 $('refresh').onclick=()=>action(()=>loadFolder());$('more').onclick=()=>action(()=>loadFolder(nextPage));$('filter').oninput=renderFiles;
 $('back').onclick=()=>action(async()=>{const previous=history.pop();if(previous){folder=previous.id;folderName=previous.name;await loadFolder();}});
