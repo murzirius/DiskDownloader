@@ -1,5 +1,6 @@
 import argparse
 import json
+import logging
 import os
 from pathlib import Path
 import queue
@@ -75,6 +76,7 @@ def main(argv=None):
     ui_queue = queue.Queue()
     stopping = threading.Event()
     stopped = threading.Event()
+    http_stopped = threading.Event()
     ready = threading.Event()
     failed = threading.Event()
     service = {}
@@ -136,11 +138,16 @@ def main(argv=None):
             if engine.busy():
                 engine.pause(engine.active, stopped=True)
                 engine.thread.join()
-            service["server"].close()
+            # HTTP workers can still use the trigger to flush the shutdown
+            # response. Keep the I/O loop and its sockets alive until they exit.
             service["server"].task_dispatcher.shutdown()
-        stopped.set()
+            http_stopped.set()
+        else:
+            stopped.set()
 
     def start():
+        server = None
+        channels = {}
         try:
             ui_queue.put(("status", "Открываем историю…" if lang == "ru" else "Opening task history…"))
             from .store import Store
@@ -156,7 +163,8 @@ def main(argv=None):
             drive = Drive(auth, quota)
             engine = Engine(store, drive)
             app = create_app(store, auth, drive, engine, shutdown=shutdown, picker=pick_folder)
-            server = create_server(app, host="127.0.0.1", port=args.port, threads=8, ident="DiskDownloader")
+            server = create_server(app, host="127.0.0.1", port=args.port, threads=8,
+                                   ident="DiskDownloader", map=channels)
             url = "http://127.0.0.1:" + str(server.effective_port) + "/"
             app.config["APP_ORIGIN"] = url.rstrip("/")
             service.update(store=store, auth=auth, engine=engine, server=server, url=url)
@@ -167,14 +175,22 @@ def main(argv=None):
             ready.set()
             if not args.no_browser and not stopping.is_set():
                 webbrowser.open(url)
-            if not stopping.is_set():
-                server.run()
+            # Only this thread may close sockets: closing them from shutdown()
+            # races with select()/poll() on Unix. Poll in bounded steps so a
+            # shutdown request can stop the loop without closing its trigger.
+            while not http_stopped.is_set():
+                server.asyncore.loop(timeout=0.1, map=channels, count=1,
+                                     use_poll=server.adj.asyncore_use_poll)
         except Exception:
+            logging.getLogger(__name__).exception("Local service failed")
             failed.set()
             ui_queue.put(("status", text["application_failed"]))
             if root is None:
                 stopped.set()
         finally:
+            if server is not None:
+                server.task_dispatcher.shutdown()
+                server.asyncore.close_all(map=channels)
             if ready.is_set():
                 stopped.set()
 
@@ -218,6 +234,7 @@ def main(argv=None):
     else:
         while not stopped.wait(0.5):
             pass
+    worker.join()
     if ready.is_set():
         runtime = directory / "runtime.json"
         try:
