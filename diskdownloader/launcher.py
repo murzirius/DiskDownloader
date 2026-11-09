@@ -4,6 +4,7 @@ import logging
 import os
 from pathlib import Path
 import queue
+import secrets
 import signal
 import sys
 import threading
@@ -65,9 +66,9 @@ def main(argv=None):
         try:
             import re
             runtime = json.loads((directory / "runtime.json").read_text(encoding="utf-8"))
-            url = runtime["url"]
-            if re.fullmatch(r"http://127\.0\.0\.1:[0-9]{1,5}/", url) and not args.no_browser:
-                webbrowser.open(url)
+            url, key = runtime["url"], runtime["key"]
+            if re.fullmatch(r"http://127\.0\.0\.1:[0-9]{1,5}/", url) and re.fullmatch(r"[A-Za-z0-9_-]{20,100}", key) and not args.no_browser:
+                webbrowser.open(url + "?key=" + key)
         except Exception:
             pass
         return 0
@@ -135,6 +136,7 @@ def main(argv=None):
             time.sleep(0.05)
         if ready.is_set():
             engine = service["engine"]
+            engine.close()
             if engine.busy():
                 engine.pause(engine.active, stopped=True)
                 engine.thread.join()
@@ -162,19 +164,20 @@ def main(argv=None):
             quota = Quota(store)
             drive = Drive(auth, quota)
             engine = Engine(store, drive)
-            app = create_app(store, auth, drive, engine, shutdown=shutdown, picker=pick_folder)
+            key = secrets.token_urlsafe(32)
+            app = create_app(store, auth, drive, engine, shutdown=shutdown, picker=pick_folder, access_key=key)
             server = create_server(app, host="127.0.0.1", port=args.port, threads=8,
                                    ident="DiskDownloader", map=channels)
             url = "http://127.0.0.1:" + str(server.effective_port) + "/"
             app.config["APP_ORIGIN"] = url.rstrip("/")
-            service.update(store=store, auth=auth, engine=engine, server=server, url=url)
+            service.update(store=store, auth=auth, engine=engine, server=server, url=url + "?key=" + key)
             runtime = directory / "runtime.json"
             temp = directory / "runtime.new"
-            temp.write_text(json.dumps({"pid": os.getpid(), "url": url}), encoding="utf-8")
+            temp.write_text(json.dumps({"pid": os.getpid(), "url": url, "key": key}), encoding="utf-8")
             os.replace(temp, runtime)
             ready.set()
             if not args.no_browser and not stopping.is_set():
-                webbrowser.open(url)
+                webbrowser.open(service["url"])
             # Only this thread may close sockets: closing them from shutdown()
             # races with select()/poll() on Unix. Poll in bounded steps so a
             # shutdown request can stop the loop without closing its trigger.

@@ -20,10 +20,11 @@ def test_detached_service_starts_outside_source_directory_and_stops(tmp_path):
     while not runtime.exists():
         assert time.monotonic()<deadline,'background service did not start'
         time.sleep(.1)
-    url=json.loads(runtime.read_text(encoding='utf-8'))['url']
+    info=json.loads(runtime.read_text(encoding='utf-8'))
+    url=info['url']
     session=requests.Session();session.trust_env=False
     try:
-        page=session.get(url,timeout=5)
+        page=session.get(url,params={'key':info['key']},timeout=5)
         assert page.status_code==200
         token=re.search(r'name="app-token" content="([^"]+)"',page.text).group(1)
         assert session.get(url+'api/state',timeout=5).json()['auth']['connected'] is False

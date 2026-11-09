@@ -1,6 +1,7 @@
 import contextlib
 import json
 import sqlite3
+import threading
 import time
 import uuid
 
@@ -8,6 +9,9 @@ import uuid
 class Store:
     def __init__(self, directory):
         self.path = directory / "history.sqlite3"
+        self._cache_lock = threading.Lock()
+        self._stats = {}
+        self._generation = 0
         with self.db() as db:
             db.executescript("""
             CREATE TABLE IF NOT EXISTS settings(key TEXT PRIMARY KEY, value TEXT NOT NULL);
@@ -70,25 +74,51 @@ class Store:
                        (identity, project, account, source, name, root, time.time(), workers))
         return identity
 
+    def delete_job(self, identity):
+        self._invalidate(identity)
+        with self.db() as db:
+            for table in ("files", "folders", "events"):
+                db.execute("DELETE FROM " + table + " WHERE job=?", (identity,))
+            db.execute("DELETE FROM jobs WHERE id=?", (identity,))
+
     def change_job(self, identity, **fields):
         assert set(fields) <= {"status", "phase", "error"}
+        self._invalidate(identity)
         with self.db() as db:
             db.execute("UPDATE jobs SET " + ",".join(k + "=?" for k in fields) + " WHERE id=?", (*fields.values(), identity))
+        self._invalidate(identity)
 
     def event(self, job, code):
         with self.db() as db:
             db.execute("INSERT INTO events(job,time,code) VALUES(?,?,?)", (job, time.time(), code))
             db.execute("DELETE FROM events WHERE id < (SELECT COALESCE(MAX(id),0)-1000 FROM events)")
 
+    def _invalidate(self, identity):
+        with self._cache_lock:
+            self._generation += 1
+            self._stats.pop(identity, None)
+
     def overview(self):
+        # Counting every file of 30 jobs on each UI poll is expensive for large drives, so
+        # statistics of idle jobs are cached until the job changes state again.
+        with self._cache_lock:
+            generation = self._generation
         with self.db() as db:
             jobs = [dict(r) for r in db.execute("SELECT * FROM jobs ORDER BY created DESC LIMIT 30")]
             for job in jobs:
-                stats = db.execute("""SELECT COUNT(*) AS total,
-                  COALESCE(SUM(status='complete'),0) AS complete,
-                  COALESCE(SUM(status='failed'),0) AS failed,
-                  COALESCE(SUM(status='unsupported'),0) AS unsupported,
-                  COALESCE(SUM(bytes),0) AS bytes FROM files WHERE job=?""", (job["id"],)).fetchone()
-                job.update(dict(stats))
-                job["folders"] = db.execute("SELECT COUNT(*) FROM folders WHERE job=? AND done=1", (job["id"],)).fetchone()[0]
+                idle = job["status"] not in ("running", "pausing", "stopping")
+                with self._cache_lock:
+                    stats = self._stats.get(job["id"]) if idle else None
+                if stats is None:
+                    stats = dict(db.execute("""SELECT COUNT(*) AS total,
+                      COALESCE(SUM(status='complete'),0) AS complete,
+                      COALESCE(SUM(status='failed'),0) AS failed,
+                      COALESCE(SUM(status='unsupported'),0) AS unsupported,
+                      COALESCE(SUM(bytes),0) AS bytes FROM files WHERE job=?""", (job["id"],)).fetchone())
+                    stats["folders"] = db.execute("SELECT COUNT(*) FROM folders WHERE job=? AND done=1", (job["id"],)).fetchone()[0]
+                    if idle:
+                        with self._cache_lock:
+                            if generation == self._generation:
+                                self._stats[job["id"]] = stats
+                job.update(stats)
         return jobs

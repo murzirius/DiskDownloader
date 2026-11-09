@@ -32,6 +32,7 @@ class Engine:
         self.active = None
         self.stop_status = "paused"
         self.failure = None
+        self.closing = False
         self.live = {"files_checked": 0, "current": "", "network_bytes": 0, "started": 0}
 
     def busy(self):
@@ -42,8 +43,15 @@ class Engine:
         if self.stop.is_set():
             raise Interrupted()
 
+    def close(self):
+        """Refuse new work once the application is shutting down."""
+        with self.lock:
+            self.closing = True
+
     def start(self, identity):
         with self.lock:
+            if self.closing:
+                raise AppError("shutdown_notice")
             if self.busy():
                 raise AppError("task_active")
             job = self.store.job(identity)
@@ -266,7 +274,7 @@ class Engine:
         try:
             self._retry(lambda: self._transfer(job, row))
         except AppError as exc:
-            if exc.retryable or exc.code in ("google_signin_expired", "connect_google", "low_space", "different_account") or exc.source == "local":
+            if exc.retryable or exc.code in ("google_signin_expired", "connect_google", "low_space", "different_account", "drive_api_disabled", "drive_permission_required") or exc.source == "local":
                 raise
             with self.store.db() as db:
                 db.execute("UPDATE files SET status='failed',error=? WHERE job=? AND id=?", (exc.code, job["id"], row["id"]))

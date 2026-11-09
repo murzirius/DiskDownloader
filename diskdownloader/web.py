@@ -7,7 +7,7 @@ import threading
 from pathlib import Path
 from urllib.parse import urlencode
 
-from flask import Flask, Response, jsonify, render_template, request
+from flask import Flask, Response, jsonify, redirect, render_template, request
 from werkzeug.exceptions import HTTPException
 
 from . import __version__
@@ -17,10 +17,17 @@ from .errors import AppError
 from .quota import DEFAULTS
 
 
-def create_app(store, auth, drive, engine, *, origin="http://127.0.0.1:8767", shutdown=None, picker=None):
+def same(left, right):
+    return secrets.compare_digest(str(left).encode("utf-8"), str(right).encode("utf-8"))
+
+
+def create_app(store, auth, drive, engine, *, origin="http://127.0.0.1:8767", shutdown=None, picker=None, access_key=None):
     app = Flask(__name__)
     app.config.update(MAX_CONTENT_LENGTH=64 * 1024, JSON_SORT_KEYS=False, APP_ORIGIN=origin)
     csrf = secrets.token_urlsafe(32)
+    # Per-launch secret: other local users or processes cannot read the page (and its CSRF token) without it.
+    access = access_key or secrets.token_urlsafe(32)
+    app.extensions["access_key"] = access
     messages = {lang: json.loads((Path(__file__).parent / "locales" / (lang + ".json")).read_text(encoding="utf-8")) for lang in ("en", "ru")}
     assets = {name: hashlib.sha256((Path(__file__).parent / "static" / name).read_bytes()).hexdigest()[:12] for name in ("app.js", "app.css")}
     app.extensions["csrf"] = csrf
@@ -31,8 +38,15 @@ def create_app(store, auth, drive, engine, *, origin="http://127.0.0.1:8767", sh
         current_origin = app.config["APP_ORIGIN"]
         if request.host != current_origin.split("://", 1)[1] or request.remote_addr not in ("127.0.0.1", "::1"):
             return jsonify(error="local_request_required"), 403
+        cookie = "dd_session_" + current_origin.rsplit(":", 1)[-1]
+        if not same(request.cookies.get(cookie, ""), access):
+            if request.method == "GET" and request.path == "/" and same(request.args.get("key", ""), access):
+                response = redirect("/")
+                response.set_cookie(cookie, access, httponly=True, samesite="Strict", path="/")
+                return response
+            return jsonify(error="local_request_required"), 403
         if request.method not in ("GET", "HEAD", "OPTIONS"):
-            if request.headers.get("Origin") not in (None, current_origin) or not secrets.compare_digest(request.headers.get("X-App-Token", ""), csrf):
+            if request.headers.get("Origin") not in (None, current_origin) or not same(request.headers.get("X-App-Token", ""), csrf):
                 return jsonify(error="local_request_required"), 403
 
     @app.after_request
@@ -148,7 +162,12 @@ def create_app(store, auth, drive, engine, *, origin="http://127.0.0.1:8767", sh
         if type(workers) is not int or not 1 <= workers <= 8 or not isinstance(name, str) or len(name) > 500:
             raise AppError("invalid_request")
         identity = store.create_job(auth.project, "", source, name, str(Path(root).absolute()), workers)
-        engine.start(identity)
+        try:
+            engine.start(identity)
+        except Exception:
+            # Do not leave an orphan task behind when another start won the race.
+            store.delete_job(identity)
+            raise
         return jsonify(id=identity)
 
     @app.post("/api/jobs/<identity>/<action>")

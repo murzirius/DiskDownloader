@@ -70,10 +70,12 @@ assert not any(t.name == "local-service" for t in threading.enumerate())
             assert process.poll() is None, process.communicate(timeout=5)
             assert time.monotonic() < deadline, "service did not start"
             time.sleep(.05)
-        url = json.loads(runtime.read_text(encoding="utf-8"))["url"]
+        info = json.loads(runtime.read_text(encoding="utf-8"))
+        url = info["url"]
         with requests.Session() as session:
             session.trust_env = False
-            page = session.get(url, timeout=5)
+            assert session.get(url, timeout=5).status_code == 403
+            page = session.get(url, params={"key": info["key"]}, timeout=5)
             token = re.search(r'name="app-token" content="([^"]+)"', page.text).group(1)
             response = session.post(url + "api/shutdown", headers={"X-App-Token": token},
                                     json={}, timeout=15)

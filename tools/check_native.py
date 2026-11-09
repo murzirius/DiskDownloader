@@ -64,7 +64,8 @@ def main():
                 assert any(title=='DiskDownloader' for _,title in windows()),'native status window missing'
                 native_window=True
             session=requests.Session();session.trust_env=False
-            response=session.get(url,headers={"Accept-Language":"en-US"},timeout=10)
+            assert session.get(url,timeout=5).status_code==403,"page must require the local access key"
+            response=session.get(url,params={"key":runtime["key"]},headers={"Accept-Language":"en-US"},timeout=10)
             assert response.status_code==200 and '<html lang="en">' in response.text
             token=re.search(r'name="app-token" content="([^"]+)"',response.text).group(1)
             assert session.get(url+"api/state",timeout=5).json()["quota"]["authoritative"] is False

@@ -79,7 +79,13 @@ class Auth:
                 return
             epoch = self.epoch
             profile = hashlib.sha256(self.config["installed"]["client_id"].encode()).hexdigest()
-            value = {"config": self.config, "credentials": json.loads(self.credentials.to_json()) if self.credentials else None}
+            credentials = json.loads(self.credentials.to_json()) if self.credentials else None
+            if credentials:
+                # The refresh token is enough; short-lived access tokens would risk exceeding
+                # the Windows Credential Manager entry size limit.
+                credentials.pop("token", None)
+                credentials.pop("expiry", None)
+            value = {"config": self.config, "credentials": credentials}
         try:
             with self.vault_lock:
                 with self.lock:

@@ -80,7 +80,7 @@ def check(args):
         context=browser.new_context(locale="ru-RU",viewport={"width":1440,"height":1100},device_scale_factor=1)
         page=context.new_page();errors=[]
         page.on("pageerror",lambda e:errors.append(str(e)))
-        page.goto(args.url,wait_until="networkidle")
+        page.goto(args.open,wait_until="networkidle")
         page.locator("#connection-status").wait_for()
         expect(page.locator('#help')).to_be_visible()
         page.keyboard.press('Escape')
@@ -109,7 +109,7 @@ def check(args):
         expect(page.locator("html")).to_have_attribute("lang","ru")
         assert page.evaluate("document.documentElement.scrollWidth<=window.innerWidth")
         # Exercise populated layouts without a Google account or real archive.
-        snapshot=context.request.get(args.url+'api/state').json()
+        snapshot=context.request.get(args.open.split('?')[0]+'api/state').json()
         clean_snapshot=json.loads(json.dumps(snapshot))
         snapshot['auth']={'project':'synthetic-project','connected':True,'configured':True,'pending':False,'persistent':False,'error':''}
         snapshot['active']='synthetic-task'
@@ -202,7 +202,7 @@ def check(args):
         blocked=browser.new_context(locale='en-US')
         blocked.add_init_script("for(const key of ['getItem','setItem'])Storage.prototype[key]=()=>{throw new DOMException('Storage blocked','SecurityError')}")
         offline=blocked.new_page();offline.on('pageerror',lambda e:errors.append(str(e)))
-        offline.goto(args.url,wait_until='networkidle')
+        offline.goto(args.open,wait_until='networkidle')
         expect(offline.locator('#help')).to_be_visible()
         offline.keyboard.press('Escape')
         offline.evaluate('update()')
@@ -222,6 +222,7 @@ def main():
     parser.add_argument('--output',default='ui-validation')
     args=parser.parse_args()
     if args.url:
+        args.open=args.url  # a full URL, including ?key=..., may be passed explicitly
         check(args)
         return
     root=Path(__file__).resolve().parents[1]
@@ -236,13 +237,14 @@ def main():
                 assert process.poll() is None,'source app exited'
                 assert time.monotonic()<deadline,'source app startup timeout'
                 time.sleep(.1)
-            args.url=json.loads((state/'runtime.json').read_text(encoding='utf-8'))['url']
+            runtime=json.loads((state/'runtime.json').read_text(encoding='utf-8'))
+            args.url=runtime['url'];args.open=args.url+'?key='+runtime['key']
             check(args)
     finally:
         if process and process.poll() is None:
             try:
                 session=requests.Session();session.trust_env=False
-                page=session.get(args.url,timeout=5).text
+                page=session.get(args.open,timeout=5).text
                 token=re.search(r'name="app-token" content="([^"]+)"',page).group(1)
                 session.post(args.url+'api/shutdown',headers={'X-App-Token':token},json={},timeout=10)
                 process.wait(20)

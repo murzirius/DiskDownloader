@@ -1,5 +1,6 @@
 """Filesystem safeguards adapted from YaDiskDownloader (MIT, murzirius)."""
 import ctypes
+import errno
 import hashlib
 import os
 import re
@@ -16,7 +17,13 @@ def component(name):
     if re.fullmatch(r"(?i)(CON|PRN|AUX|NUL|COM[1-9¹²³]|LPT[1-9¹²³])", name.split(".")[0]):
         name = "_" + name
     stem, ext = os.path.splitext(name)
-    return stem.encode("utf-8")[:170].decode("utf-8", "ignore") + ext[:25]
+    short = stem.encode("utf-8")[:170].decode("utf-8", "ignore")
+    if short != stem:
+        # Cutting can leave a trailing space or dot, which Windows forbids and safe_path rejects.
+        short = short.rstrip(" .")
+    if len(ext) > 25:
+        ext = ext[:25].rstrip(" .")
+    return (short + ext) or "unnamed"
 
 
 def suffix(name, identity):
@@ -77,8 +84,17 @@ def publish(part, target):
         if not move(str(part), str(target), 8):
             raise ctypes.WinError(ctypes.get_last_error())
     else:
-        os.link(part, target)
-        os.unlink(part)
+        try:
+            os.link(part, target)
+        except FileExistsError:
+            raise
+        except OSError:
+            # exFAT, FAT32 and some network shares cannot hard-link; rename without overwriting.
+            if os.path.lexists(target):
+                raise FileExistsError(errno.EEXIST, os.strerror(errno.EEXIST), str(target)) from None
+            os.rename(part, target)
+        else:
+            os.unlink(part)
         fd = os.open(Path(target).parent, os.O_RDONLY | getattr(os, "O_DIRECTORY", 0))
         try:
             os.fsync(fd)

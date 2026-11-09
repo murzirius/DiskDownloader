@@ -22,7 +22,38 @@ def web(tmp_path):
     app.config.update(TESTING=True)
     client=app.test_client()
     client.environ_base.update(REMOTE_ADDR="127.0.0.1")
+    client.set_cookie("dd_session_8767",app.extensions["access_key"],domain="127.0.0.1")
     return store,app,client
+
+
+def anonymous(app):
+    client=app.test_client()
+    client.environ_base.update(REMOTE_ADDR="127.0.0.1")
+    return client
+
+
+def test_pages_and_api_require_the_per_launch_access_key(web):
+    _,app,_=web
+    url="http://127.0.0.1:8767"
+    other=anonymous(app)
+    assert other.get("/",base_url=url).status_code==403
+    assert other.get("/api/state",base_url=url).status_code==403
+    assert other.get("/?key=wrong",base_url=url).status_code==403
+    assert b"app-token" not in other.get("/?key=wrong",base_url=url).data
+    assert other.post("/api/shutdown",base_url=url,json={}).status_code==403
+
+
+def test_access_key_is_exchanged_for_an_http_only_cookie(web):
+    _,app,_=web
+    url="http://127.0.0.1:8767"
+    other=anonymous(app)
+    response=other.get("/?key="+app.extensions["access_key"],base_url=url)
+    assert response.status_code==302 and response.headers["Location"]=="/"
+    cookie=response.headers["Set-Cookie"]
+    assert "HttpOnly" in cookie and "SameSite=Strict" in cookie
+    assert other.get("/",base_url=url).status_code==200
+    # A key in the URL of an API request is never accepted.
+    assert anonymous(app).get("/api/state?key="+app.extensions["access_key"],base_url=url).status_code==403
 
 
 def test_language_follows_browser_and_explicit_selection(web):
@@ -99,6 +130,18 @@ def test_credentials_never_fall_back_to_plaintext(tmp_path,monkeypatch):
     assert store.get("profile") is None
     assert not list(tmp_path.glob("*.json"))
     assert b"synthetic-not-a-real-secret" not in store.path.read_bytes()
+
+
+def test_saved_credentials_omit_short_lived_access_token(tmp_path,monkeypatch):
+    saved={}
+    monkeypatch.setattr("diskdownloader.auth.keyring.set_password",lambda service,profile,value:saved.update(value=value))
+    auth=Auth(Store(tmp_path));auth.configure(oauth_config())
+    from google.oauth2.credentials import Credentials
+    auth.credentials=Credentials(token="ya29.short-lived",refresh_token="refresh",client_id="synthetic.apps.googleusercontent.com",client_secret="synthetic-not-a-real-secret",token_uri="https://oauth2.googleapis.com/token",scopes=["https://www.googleapis.com/auth/drive.readonly"])
+    auth._save()
+    stored=json.loads(saved["value"])["credentials"]
+    assert "ya29.short-lived" not in saved["value"] and stored["refresh_token"]=="refresh"
+    assert Credentials.from_authorized_user_info(stored,["https://www.googleapis.com/auth/drive.readonly"]).token is None
 
 
 def test_error_responses_do_not_expose_exception_details(web):

@@ -56,6 +56,7 @@ class Drive:
             try:
                 body = response.json().get("error", {})
                 reasons = {e.get("reason") for e in body.get("errors", []) if isinstance(e, dict)}
+                reasons |= {e.get("reason") for e in body.get("details", []) if isinstance(e, dict)}
             except (ValueError, AttributeError, TypeError):
                 pass
             response.close()
@@ -67,6 +68,10 @@ class Drive:
                     self.auth.invalidate()
                 raise AppError("google_signin_expired", source="google")
             if code == 403:
+                if reasons & {"accessNotConfigured", "SERVICE_DISABLED"}:
+                    raise AppError("drive_api_disabled", source="google")
+                if reasons & {"insufficientPermissions", "ACCESS_TOKEN_SCOPE_INSUFFICIENT"}:
+                    raise AppError("drive_permission_required", source="google")
                 raise AppError("google_download_denied", source="google")
             if code == 404:
                 raise AppError("google_file_missing", source="google")
